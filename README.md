@@ -1,3 +1,5 @@
+## This is my fork that removes the annoying public bot check. Original README below.
+
 <img align="right" src="https://i.imgur.com/zrE80HY.png" height="200" width="200">
 
 # JMusicBot
@@ -58,3 +60,43 @@ Please see the [Setup Page](https://jmusicbot.com/setup) to run this bot yoursel
 
 ## Editing
 This bot (and the source code here) might not be easy to edit for inexperienced programmers. The main purpose of having the source public is to show the capabilities of the libraries, to allow others to understand how the bot works, and to allow those knowledgeable about java, JDA, and Discord bot development to contribute. There are many requirements and dependencies required to edit and compile it, and there will not be support provided for people looking to make changes on their own. Instead, consider making a feature request (see the above section). If you choose to make edits, please do so in accordance with the Apache 2.0 License.
+
+## Dockerfile
+
+My (654wak654's) Dockerfile for running this fork.
+
+```Dockerfile
+FROM maven:3-eclipse-temurin-21 AS build
+
+WORKDIR /usr/src/setup
+
+# Download musicbot release source
+RUN git clone --depth 1 --branch 0.4.0a https://github.com/654wak654/MusicBot
+
+RUN cd MusicBot \
+    # Build with maven
+    && mvn --batch-mode --update-snapshots verify \
+    # Rename & move jar
+    && mv target/*-All.jar ../musicbot.jar
+
+# Build JRE with all modules
+RUN $JAVA_HOME/bin/jlink \
+    --add-modules ALL-MODULE-PATH \
+    --strip-debug \
+    --no-man-pages \
+    --no-header-files \
+    --output /javaruntime
+
+FROM debian:12-slim
+
+WORKDIR /usr/src/app
+
+# Get JRE from last step and setup env vars for it
+ENV JAVA_HOME=/usr/src/openjdk
+ENV PATH "${JAVA_HOME}/bin:${PATH}"
+COPY --from=build /javaruntime $JAVA_HOME
+
+COPY --from=build /usr/src/setup/musicbot.jar .
+
+CMD ["java", "-Dnogui=true", "-jar", "musicbot.jar"]
+```
